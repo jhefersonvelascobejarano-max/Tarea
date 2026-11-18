@@ -8,28 +8,27 @@ using System.ComponentModel.DataAnnotations;
 public class PersonasController : ControllerBase
 {
     private readonly SistemaContext _context;
+
     public PersonasController(SistemaContext context)
     {
         _context = context;
     }
 
-    [HttpGet]
+    // GET: api/personas/listar
     [HttpGet("listar")]
     public async Task<ActionResult<IEnumerable<Persona>>> GetPersonas()
     {
-        return await _context.Persona.AsNoTracking().OrderBy(persona => persona.Id).ToListAsync();
+        return await _context.Persona
+            .AsNoTracking()
+            .OrderBy(persona => persona.Id)
+            .ToListAsync();
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<Persona>> GetPersona(int id)
-    {
-        var persona = await _context.Persona.FindAsync(id);
-        return persona is null ? NotFound() : persona;
-    }
-
-    [HttpPost]
+    // POST: api/personas/crear
+    [HttpPost("crear")]
     public async Task<ActionResult<Persona>> PostPersona([FromBody] PersonaDatos datos)
     {
+        // Validar si ya existe una persona con el mismo CI
         if (await _context.Persona.AnyAsync(persona => persona.Ci == datos.Ci))
         {
             return BadRequest("Ya existe una persona con ese CI");
@@ -45,49 +44,7 @@ public class PersonasController : ControllerBase
         _context.Persona.Add(persona);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetPersona), new { id = persona.Id }, persona);
-    }
-
-    [HttpPost("crear")]
-    public Task<ActionResult<Persona>> PostPersonaDesdeConsulta(
-        [FromQuery, Required] string nombre, [FromQuery, Required] string ci)
-    {
-        return PostPersona(new PersonaDatos(nombre, ci));
-    }
-
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> PutPersona(int id, PersonaDatos datos)
-    {
-        var persona = await _context.Persona.FindAsync(id);
-        if (persona is null)
-        {
-            return NotFound();
-        }
-
-        if (await _context.Persona.AnyAsync(otra => otra.Id != id && otra.Ci == datos.Ci))
-        {
-            return BadRequest("Ya existe una persona con ese CI");
-        }
-
-        persona.Nombre = datos.Nombre;
-        persona.Ci = datos.Ci;
-        persona.Estado = datos.Estado ?? persona.Estado;
-        await _context.SaveChangesAsync();
-        return NoContent();
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeletePersona(int id)
-    {
-        var persona = await _context.Persona.FindAsync(id);
-        if (persona is null)
-        {
-            return NotFound();
-        }
-
-        _context.Persona.Remove(persona);
-        await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok(persona);
     }
 
     public record PersonaDatos(
